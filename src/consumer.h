@@ -6,10 +6,16 @@
 #include "ring_buffer.h"
 #include "packet.h"
 
+typedef struct shared_data_t {
+	int out_fd;
+	pthread_mutex_t mutex;
+} shared_data_t;
+
 typedef struct so_consumer_ctx_t {
 	struct so_ring_buffer_t *producer_rb;
 
     /* TODO: add synchronization primitives for timestamp ordering */
+	shared_data_t *shared_data;
 } so_consumer_ctx_t;
 
 int create_consumers(pthread_t *tids,
