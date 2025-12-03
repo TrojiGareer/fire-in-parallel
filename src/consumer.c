@@ -14,8 +14,12 @@ void consumer_thread(so_consumer_ctx_t *ctx)
 	/* TODO: implement consumer thread */
 	char out_buf[256];
 	struct so_packet_t pkt;
-	int id;
-	while (ring_buffer_dequeue(ctx->producer_rb, &pkt, PKT_SZ, &id) != 0) {
+	while (ring_buffer_dequeue(ctx->producer_rb, &pkt, PKT_SZ) != 0) {
+		// id ul trebuie obtinut 
+		pthread_mutex_lock(&ctx->shared_data->mutex);
+		int id = ctx->shared_data->dequeue_count;
+		ctx->shared_data->dequeue_count++;
+		pthread_mutex_unlock(&ctx->shared_data->mutex);
 
 		int action = process_packet(&pkt);
 		unsigned long hash = packet_hash(&pkt);
@@ -23,24 +27,25 @@ void consumer_thread(so_consumer_ctx_t *ctx)
 
 		pthread_mutex_lock(&ctx->shared_data->mutex);
 
-        while (id != ctx->shared_data->timestamp) {
-            pthread_mutex_unlock(&ctx->shared_data->mutex);
-            sem_wait(&ctx->shared_data->sem);
-            pthread_mutex_lock(&ctx->shared_data->mutex);
-
-            if (id != ctx->shared_data->timestamp) {
-                sem_post(&ctx->shared_data->sem);
-            }
-        }
-
+		// cat timp nu e randul consumatorului curent
+		while (ctx->shared_data->print_count != id) {
+			pthread_mutex_unlock(&ctx->shared_data->mutex);
+			sem_wait(&ctx->shared_data->sem);
+			pthread_mutex_lock(&ctx->shared_data->mutex);
+			if (ctx->shared_data->print_count != id) {
+				// trezesc urmatorul consumator pana cand e rândul lui
+				sem_post(&ctx->shared_data->sem);
+			}
+		}
         int len = snprintf(out_buf, 256, "%s %016lx %lu\n",
             RES_TO_STR(action), hash, timestamp);
 
         write(ctx->shared_data->out_fd, out_buf, len);
 
-        ctx->shared_data->timestamp++;
+		ctx->shared_data->print_count++;
 
         pthread_mutex_unlock(&ctx->shared_data->mutex);
+		// trezesc urmatorul consumator
         sem_post(&ctx->shared_data->sem);
 	}
 	free(ctx);
@@ -58,7 +63,8 @@ int create_consumers(pthread_t *tids,
 
 	shared_data_t *shared_data = malloc(sizeof(shared_data_t));
 	shared_data->out_fd = open(out_filename, O_RDWR|O_CREAT|O_TRUNC, 0666);
-	shared_data->timestamp = 0;
+	shared_data->dequeue_count = 0;
+	shared_data->print_count = 0;
 	
 	for (int i = 0; i < num_consumers; i++) {
 		/*
