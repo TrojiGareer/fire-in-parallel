@@ -14,9 +14,10 @@ void consumer_thread(so_consumer_ctx_t *ctx)
 	/* TODO: implement consumer thread */
 	char out_buf[256];
 	struct so_packet_t pkt;
+	pthread_mutex_lock(&ctx->shared_data->mutex);
 	while (ring_buffer_dequeue(ctx->producer_rb, &pkt, PKT_SZ) != 0) {
 		// id ul trebuie obtinut 
-		pthread_mutex_lock(&ctx->shared_data->mutex);
+		// pthread_mutex_lock(&ctx->shared_data->mutex);
 		int id = ctx->shared_data->dequeue_count;
 		ctx->shared_data->dequeue_count++;
 		pthread_mutex_unlock(&ctx->shared_data->mutex);
@@ -65,6 +66,9 @@ int create_consumers(pthread_t *tids,
 	shared_data->out_fd = open(out_filename, O_RDWR|O_CREAT|O_TRUNC, 0666);
 	shared_data->dequeue_count = 0;
 	shared_data->print_count = 0;
+
+	sem_init(&shared_data->sem, 0, 0);
+	pthread_mutex_init(&shared_data->mutex, NULL);
 	
 	for (int i = 0; i < num_consumers; i++) {
 		/*
