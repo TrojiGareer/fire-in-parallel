@@ -10,8 +10,6 @@ typedef struct shared_data_t {
 	int out_fd;
 	pthread_mutex_t mutex;
 	sem_t sem;
-
-	int dequeue_count;
 	int print_count;
 } shared_data_t;
 
