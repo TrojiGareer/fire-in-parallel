@@ -13,6 +13,7 @@ int ring_buffer_init(so_ring_buffer_t *ring, size_t cap)
 	ring->len = 0;
 	ring->read_pos = 0;
 	ring->write_pos = 0;
+	ring->counter = 0;
 	pthread_mutex_init(&ring->mutex, NULL);
 	sem_init(&ring->sem_empty, 0, cap / PKT_SZ);
 	sem_init(&ring->sem_full, 0, 0);
@@ -40,7 +41,7 @@ ssize_t ring_buffer_enqueue(so_ring_buffer_t *ring, void *data, size_t size)
 	return -1;
 }
 
-ssize_t ring_buffer_dequeue(so_ring_buffer_t *ring, void *data, size_t size)
+ssize_t ring_buffer_dequeue(so_ring_buffer_t *ring, void *data, size_t size, int *id)
 {
 	/* TODO: Implement ring_buffer_dequeue */
 	sem_wait(&ring->sem_full);
@@ -65,6 +66,9 @@ ssize_t ring_buffer_dequeue(so_ring_buffer_t *ring, void *data, size_t size)
 
 	ring->read_pos += size;
 	ring->len -= size;
+
+	*id = ring->counter;
+	ring->counter++;
 
 	pthread_mutex_unlock(&ring->mutex);
 	sem_post(&ring->sem_empty);

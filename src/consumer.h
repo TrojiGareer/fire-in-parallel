@@ -9,6 +9,9 @@
 typedef struct shared_data_t {
 	int out_fd;
 	pthread_mutex_t mutex;
+	sem_t sem;
+	pthread_cond_t cond;
+	int timestamp;
 } shared_data_t;
 
 typedef struct so_consumer_ctx_t {

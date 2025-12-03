@@ -21,11 +21,13 @@ typedef struct so_ring_buffer_t {
 	sem_t sem_empty;
 	sem_t sem_full;
 	pthread_mutex_t mutex;
+
+	int counter;
 } so_ring_buffer_t;
 
 int     ring_buffer_init(so_ring_buffer_t *rb, size_t cap);
 ssize_t ring_buffer_enqueue(so_ring_buffer_t *rb, void *data, size_t size);
-ssize_t ring_buffer_dequeue(so_ring_buffer_t *rb, void *data, size_t size);
+ssize_t ring_buffer_dequeue(so_ring_buffer_t *rb, void *data, size_t size, int *id);
 void    ring_buffer_destroy(so_ring_buffer_t *rb);
 void    ring_buffer_stop(so_ring_buffer_t *rb);
 
